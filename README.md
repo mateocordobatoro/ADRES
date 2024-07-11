@@ -8,6 +8,30 @@ Autor: Mateo Córdoba Toro
 
 Este repositorio contiene el código R utilizado para el análisis de la distribución y diversidad de prestadores de servicios de salud en Colombia. Se utilizan datos de municipios y prestadores para explorar la concentración geográfica y la variedad de tipos de prestadores de servicios de salud en diferentes regiones del país.
 
+### Directorio y Descripción de Archivos
+
+Este proyecto contiene diversos archivos necesarios para el análisis de la distribución y diversidad de prestadores de servicios de salud en Colombia. A continuación, se describen los archivos incluidos en el directorio:
+
+- **cod_municipios.xlsx**: Este archivo contiene la codificación de los departamentos y municipios de Colombia. Es utilizado para vincular correctamente los datos de los prestadores y los municipios.
+
+- **mi_base_de_datos.sqlite**: Esta es la base de datos SQLite que se crea para almacenar las tablas de municipios y prestadores, facilitando así las consultas y la manipulación de datos.
+
+- **Municipios.xlsx**: Dataset que incluye información detallada sobre los municipios de Colombia, como superficie, población y región. Este archivo es esencial para el análisis de la distribución de prestadores.
+
+- **Municipios.zip**: Archivo comprimido que contiene el dataset de municipios. Debe ser descomprimido antes de su uso.
+
+- **Prestadores.xlsx**: Dataset que proporciona información sobre los prestadores de servicios de salud en Colombia, incluyendo su ubicación y tipo de servicio prestado.
+
+- **Prestadores.zip**: Archivo comprimido que contiene el dataset de prestadores. Debe ser descomprimido antes de su uso.
+
+- **Prueba técnica Analista de datos.pdf**: Documento que describe la prueba técnica a desarrollar. Proporciona detalles sobre los objetivos y el alcance del análisis.
+
+- **PruebaTecnicaAnalistaDatos.docx**: Informe en formato Word que contiene el análisis realizado. 
+
+---
+
+Esta estructura de directorio y la descripción de archivos proporcionan una visión clara de los recursos disponibles para llevar a cabo el análisis de la distribución y diversidad de prestadores de servicios de salud en Colombia.
+
 ## Paquetes Utilizados
 
 - DBI
