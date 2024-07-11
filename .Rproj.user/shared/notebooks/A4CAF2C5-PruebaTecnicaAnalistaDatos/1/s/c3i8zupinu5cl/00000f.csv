@@ -1,0 +1,6 @@
+"0","# Conectar a una nueva base de datos SQLite"
+"0","con <- dbConnect(RSQLite::SQLite(), ""myDB.sqlite"")"
+"0",""
+"0","# Cargar datos de Municipios.xlsx a SQLite"
+"0","Municipios <- read_excel(""Municipios.xlsx"")"
+"0","Prestadores <- read_excel(""Prestadores.xlsx"")"

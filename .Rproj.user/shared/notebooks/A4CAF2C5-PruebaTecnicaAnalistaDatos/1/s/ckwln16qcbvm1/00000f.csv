@@ -1,0 +1,4 @@
+"0",""
+"0","map_data <- merge(deptos_colombia, df2, by = ""nom_dpto"", all.x = TRUE)"
+"0",""
+"0",""

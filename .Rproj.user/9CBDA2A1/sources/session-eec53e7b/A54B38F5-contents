@@ -1,0 +1,28 @@
+---
+title: "Prueba Ténica Anlista de Datos - ADRES"
+author: "Mateo Cordoba Toro"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**Tabla Municipios:**
+
+-   Departamento (Departamento): Tipo de dato TEXT. Almacena el nombre del departamento al que pertenece el municipio.
+
+-   Dep (Dep): Tipo de dato TEXT. Proporciona una abreviatura o código del departamento.
+
+-   Municipio (Municipio): Tipo de dato TEXT. Almacena el nombre del municipio.
+
+-   Depmun (Depmun): Tipo de dato TEXT. Parece ser una combinación del departamento y el municipio.
+
+-   Superficie (Superficie): Tipo de dato REAL. Indica la superficie del municipio en unidades de área.
+
+-   Poblacion (Poblacion): Tipo de dato REAL. Representa la población del municipio.
+
+-   Irural (Irural): Tipo de dato REAL. Posiblemente indica un índice o porcentaje de ruralidad en el municipio.
+
+-   Region (Región): Tipo de dato TEXT. Describe la región a la que pertenece el municipio.

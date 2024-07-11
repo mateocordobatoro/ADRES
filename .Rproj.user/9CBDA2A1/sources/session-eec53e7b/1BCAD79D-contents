@@ -1,0 +1,284 @@
+---
+title: Análisis de la Distribución y Diversidad de Prestadores de Servicios de Salud
+  en Colombia
+output:
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+```{r, message=FALSE, warning=FALSE}
+# Paquetes usados 
+library(DBI)
+library(RSQLite)
+library(dplyr)
+library(readxl)
+library(stringr)
+library(stringi)
+library(tidyr)
+library(ggplot2)
+library(stargazer)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+
+```
+
+
+```{r, }
+# Conectar a una nueva base de datos SQLite
+con <- dbConnect(RSQLite::SQLite(), "myDB.sqlite")
+
+# Cargar datos de Municipios.xlsx a SQLite
+Municipios <- read_excel("Municipios.xlsx")
+Prestadores <- read_excel("Prestadores.xlsx")
+cod_municipios <- read_excel("cod_municipios.xlsx")
+
+# Cargar datos como tablas en SQLite
+dbWriteTable(con, "municipios", Municipios, overwrite = TRUE)
+dbWriteTable(con, "prestadores", Prestadores, overwrite = TRUE)
+dbWriteTable(con, "cod_municipios", cod_municipios, overwrite = TRUE)
+
+```
+
+```{r}
+
+# Query SQL para crear la tabla t1
+query_t1 <- "
+CREATE TEMP TABLE t1 AS
+SELECT DISTINCT 
+  `Código Municipio` AS Depmun,
+  `Nombre Departamento` AS nom_dpto,
+  `Nombre Municipio` AS nom_muni,
+  Municipios.Superficie,
+  Municipios.Poblacion,
+  Municipios.Region
+FROM cod_municipios
+LEFT JOIN Municipios ON cod_municipios.`Código Municipio` = Municipios.Depmun;
+"
+
+# Ejecutar el query para crear la tabla t1
+dbExecute(con, query_t1)
+
+# Query SQL para crear la tabla data
+query_data <- "
+CREATE TEMP TABLE data AS
+SELECT 
+  Prestadores.depa_nombre,
+  Prestadores.muni_nombre,
+  Prestadores.clpr_nombre,
+  Prestadores.habilitado,
+  Prestadores.clase_persona,
+  Prestadores.naju_nombre,
+  Prestadores.nits_nit,
+  Prestadores.nombre_prestador,
+  substr(Prestadores.codigo_habilitacion, 1, 5) AS Depmun,
+  t1.nom_dpto,
+  t1.nom_muni,
+  t1.Superficie,
+  t1.Poblacion,
+  t1.Region
+FROM Prestadores
+LEFT JOIN t1 ON substr(Prestadores.codigo_habilitacion, 1, 5) = t1.Depmun;
+"
+
+# Ejecutar el query para crear la tabla data
+dbExecute(con, query_data)
+
+# data final 
+data <- dbGetQuery(con, "SELECT * FROM data")
+
+
+# Cerrar la conexión a la base de datos
+dbDisconnect(con)
+
+
+```
+
+```{r}
+
+num_prestadores <- data %>% distinct(nits_nit) %>% count()
+num_municipios  <- data %>% distinct(muni_nombre) %>% count()
+
+```
+
+### Distribución de Prestadores por Departamento y Municipio
+
+```{r, echo=FALSE}
+
+df2 <- data %>% 
+  mutate(cod_dpto = substr(Depmun, 1, 2)) %>%
+  group_by(cod_dpto, nom_dpto, nom_muni) %>%
+  summarise(num_prestadores = n(),
+            poblacion = mean(Poblacion, na.rm = TRUE)) %>%
+  ungroup() %>% 
+  group_by(cod_dpto,nom_dpto) %>%
+  summarise(num_prestadores = sum(num_prestadores),
+            poblacion = sum(poblacion, na.rm = TRUE))
+
+
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Cargar datos de límites geográficos de los departamentos de Colombia
+colombia <- ne_countries(scale = "medium", country = "Colombia", returnclass = "sf")
+
+# Filtrar solo los departamentos de Colombia
+deptos_colombia <- ne_states(country = "Colombia", returnclass = "sf")
+
+# Seleccionar solo las columnas relevantes y renombrar
+deptos_colombia <- deptos_colombia[, c("name", "iso_a2")]
+deptos_colombia <- rename(deptos_colombia, nom_dpto = name)
+
+
+deptos_colombia <- deptos_colombia %>% 
+  mutate(
+    nom_dpto = toupper(nom_dpto),
+    nom_dpto = case_when(
+    nom_dpto == "BOGOTA"  ~ "BOGOTÁ, D. C.",
+    nom_dpto == "SAN ANDRÉS Y PROVIDENCIA" ~ "ARCHIPIÉLAGO DE SAN ANDRÉS, PROVIDENCIA Y",
+    TRUE ~ nom_dpto
+  )) 
+
+# Unir los datos de los departamentos con los datos de los prestadores
+
+map_data <- merge(deptos_colombia, df2, by = "nom_dpto", all.x = TRUE)
+
+
+```
+   
+   
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
+ggplot() +
+  geom_sf(data = map_data, aes(fill = num_prestadores)) +
+  scale_fill_gradient(name = "Número de Prestadores", low = "lightblue", high = "darkblue") +
+  labs(title = "Concentración de Prestadores\nPrestadores de Salud",
+       subtitle = "") +
+  theme_minimal()+
+  theme(legend.position = "bottom", legend.box = "horizontal")
+
+
+
+```
+
+
+La concentración de prestadores de servicios de salud por departamento en Colombia revela patrones claros que reflejan la distribución desigual de servicios de salud a lo largo del país.
+Los departamentos Antioquia, Valle del Cauca, Atlántico, Santander y el Distrito Capital muestran una alta concentración de prestadores de servicios de salud.
+Esta alta concentración se puede atribuir principalmente a que estas regiones albergan grandes centros urbanos con poblaciones densas y una alta demanda de servicios de salud. La presencia de numerosos hospitales, clínicas y otros proveedores responde a la necesidad de atención médica de una población numerosa y diversa.
+En contraste, los departamentos periféricos como Amazonas, Guainía y Vichada muestran una presencia mucho más tenue de prestadores de servicios de salud. La falta de presencia en estas zonas periféricas puede atribuirse a su baja densidad poblacional, condiciones geográficas difíciles de acceso y la escasez de infraestructura adecuada para el establecimiento de servicios de salud.
+
+
+
+```{r}
+
+
+df <- data %>%
+  group_by(nom_dpto, nom_muni) %>%
+  summarise(num_prestadores = n(),
+            poblacion = mean(Poblacion, na.rm = TRUE),
+            Superficie = mean(Superficie, na.rm = TRUE)) %>%
+  arrange(desc(num_prestadores)) 
+
+x <- df$num_prestadores
+y <- df$poblacion
+
+correlacion <- round(cor(x,y, use = "complete.obs"),3)
+
+
+```
+
+### Análisis de Correlación entre Población y Prestadores de Servicios de Salud
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
+
+
+ggplot(df, aes(x = poblacion, y = num_prestadores)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Número de Prestadores vs. Población",
+       x = "Población",
+       y = "Número de Prestadores") +
+  theme_minimal()
+
+```
+   
+   
+La correlación de `r correlacion` sugiere que hay una asociación fuerte y positiva entre la población de un municipio y la cantidad de prestadores de servicios de salud que se encuentran en ese municipio. Esto significa que, en general, a medida que aumenta la población de un municipio, tiende a haber más prestadores de servicios de salud disponibles. Esto es coherente con la lógica de oferta y demanda en servicios de salud, donde áreas más pobladas pueden soportar una mayor cantidad de proveedores de servicios de salud debido a la demanda potencialmente más alta.
+
+\newline
+
+### Análisis de Regresión entre Población, Superficie y Prestadores de Servicios de Salud
+
+```{r, echo=FALSE}
+
+modelo1 <- lm(num_prestadores ~ poblacion, data = df)
+modelo2 <- lm(num_prestadores ~ poblacion + Superficie, data = df)
+
+stargazer(modelo1,modelo2,
+          type = "text",
+          title = "Modelo de Regresión: Número de Prestadores vs. Población/Superficie",
+          header = FALSE, # Suprime los signos "#" en los encabezados
+          font.size = "small") # Tamaño de fuente pequeño)
+
+
+```
+
+Los modelos sugieren que la población de un municipio es un predictor significativo del número de prestadores de servicios de salud. El coeficiente de 0.002 nos muestra que un aumento unitario en la población de un municipio se asocia, en promedio, con un aumento de 0.002 en el número de prestadores de servicios de salud.
+
+Adicionalmente se agrega la variable de superficie para analizar si la extensión territorial de un municipio tiene impacto en la disponibilidad de prestadores de servicios de salud. El coeficiente (-0.003) indica que a medida que aumenta la superficie de un municipio, se espera una disminución en el número de prestadores de salud. 
+
+Esto podría indicar que la asignación de recursos y la accesibilidad pueden ser más complejas en municipios más extensos geográficamente. Esto podría deberse a desafíos logísticos y de infraestructura que pueden hacer menos atractivo para los prestadores de salud establecerse en áreas con mayores extensiones territoriales. 
+
+
+
+###  Análisis de Diversidad de Prestadores
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
+
+diversity_clpr <- data %>%
+  group_by(nom_dpto, nom_muni, clpr_nombre) %>% 
+  summarise(num_prestadores = n()) %>% 
+  ungroup() %>%
+  group_by(nom_dpto) %>%
+  mutate(proporcion_clpr = num_prestadores/ sum(num_prestadores)) 
+
+shannon_index <- function(proportions) {
+  -sum(proportions * log(proportions), na.rm = TRUE)
+}
+
+data_diversity <- diversity_clpr %>%
+  group_by(nom_dpto) %>%
+  summarise(shannon_clpr_diversity = shannon_index(proporcion_clpr), .groups = 'drop') 
+
+
+# Unir los datos de los departamentos con los datos de los prestadores
+
+map2_data <- merge(deptos_colombia, data_diversity, by = "nom_dpto", all.x = TRUE)
+
+
+ggplot() +
+  geom_sf(data = map2_data, aes(fill = shannon_clpr_diversity)) +
+  scale_fill_gradient(name = "Indice de Shanon", low = "lightblue", high = "darkblue") +
+  labs(title = "Diversidad de tipos de \nPrestadores de Servicios de Salud",
+       subtitle = "") +
+  theme_minimal()+
+  theme(legend.position = "bottom", legend.box = "horizontal")
+
+
+
+
+```
+
+Regiones Centrales, el Altiplano Cundiboyacense y Antioquia tienen altos índices de diversidad. Esto puede deberse a una infraestructura de salud más desarrollada y una población más grande y diversa, lo que permite una mayor variedad de prestadores de servicios de salud. 
+
+Por otro lado, las regiones periféricas y menos pobladas, como Amazonas, Guainía y Vaupés, muestran bajos índices de diversidad. Estos son típicamente departamentos con menor densidad poblacional y menor desarrollo de infraestructura de salud. en este tipo de regiones las dificultades logísticas y la falta de infraestructura pueden limitar la presencia de diversos tipos de prestadores, haciendo que los prestadores pueden encontrar poco atractivo establecerse en estas áreas debido a los altos costos operativos y logísticos.
+
+
+### Concluciones
+
+El análisis de los prestadores de servicios de salud en Colombia revela una distribución desigual, donde regiones urbanas densamente pobladas como Bogotá, Antioquia y Valle del Cauca exhiben una alta concentración y diversidad de prestadores, reflejando una respuesta adaptativa a una demanda variada de servicios de salud. En contraste, áreas periféricas como Amazonas y Guainía muestran una presencia limitada de prestadores, atribuible a desafíos logísticos y falta de infraestructura. La correlación positiva entre la población y el número de prestadores subraya la importancia de políticas que fomenten la inclusión y diversificación de prestadores, especialmente en áreas menos desarrolladas geográficamente. Estos hallazgos destacan la necesidad de políticas regionales que optimicen la coordinación y calidad de los servicios de salud para mejorar el acceso equitativo a nivel nacional.

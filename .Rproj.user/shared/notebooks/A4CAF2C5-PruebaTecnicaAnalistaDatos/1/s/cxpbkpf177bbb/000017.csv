@@ -1,0 +1,7 @@
+"0","ggplot() +"
+"0","  geom_sf(data = map_data, aes(fill = num_prestadores)) +"
+"0","  scale_fill_gradient(name = ""Número de Prestadores"", low = ""lightblue"", high = ""darkblue"") +"
+"0","  labs(title = ""Concentración de Prestadores\nPrestadores de Salud"","
+"0","       subtitle = """") +"
+"0","  theme_minimal()+"
+"0","  theme(legend.position = ""bottom"", legend.box = ""horizontal"")"
