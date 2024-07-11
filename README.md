@@ -8,6 +8,8 @@ Autor: Mateo Córdoba Toro
 
 Este repositorio contiene el código R utilizado para el análisis de la distribución y diversidad de prestadores de servicios de salud en Colombia. Se utilizan datos de municipios y prestadores para explorar la concentración geográfica y la variedad de tipos de prestadores de servicios de salud en diferentes regiones del país.
 
+En el siguiente link se encuentra el video explicativo del análisis realizado: [Video Explicativo](https://www.loom.com/share/91c290f1d87146e79ac433693c995a5e?sid=f4250f62-bcb8-4a7e-8678-2d7a860e08af)
+
 ### Directorio y Descripción de Archivos
 
 Este proyecto contiene diversos archivos necesarios para el análisis de la distribución y diversidad de prestadores de servicios de salud en Colombia. A continuación, se describen los archivos incluidos en el directorio:
